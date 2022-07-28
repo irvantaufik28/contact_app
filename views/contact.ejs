@@ -4,7 +4,16 @@
             <h2>Daftar Contact</h2>
 
             <!-- tombol add -->
-              <a href="contact/add" class="btn btn-primary">Tambah Data Contact</a>
+              <a href="/contact/add" class="btn btn-primary">Tambah Data Contact</a>
+
+
+              <!-- pop up flash -->
+              <% if (msg.length !==0) { %>
+                <div class="alert alert-success" role="alert">
+                  <%= msg %> 
+                </div>
+                
+              <% } %>
 
             <table class="table">
                 <thead>

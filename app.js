@@ -1,6 +1,11 @@
 const express = require("express");
 const epxressLayouts = require("express-ejs-layouts");
-const { loadContact, findContact } = require("./ulits/contacts");
+const { loadContact, findContact, addContact, cekDuplikat } = require("./ulits/contacts");
+const { body, validationResult, check } = require('express-validator')
+const session = require('express-session')
+const cookieParser = require('cookie-parser')
+const flash = require('connect-flash')
+
 const app = express();
 const port = 3000;
 
@@ -10,7 +15,30 @@ app.set("view engine", "ejs");
 app.use(epxressLayouts);
 
 // builtin mildeware
+// parsing data post
+app.use(express.urlencoded({ extended: true }))
+
+// express public 
 app.use(express.static("public"));
+
+// konfigurasi flassh
+app.use(cookieParser('secret'))
+app.use(
+  session({
+  cookie: { maxAge: 6000 },
+  secret : 'secret',
+  resave: true,
+  saveUninitialized: true
+})
+)
+app.use(flash())
+
+
+
+
+
+
+
 // application level midleware
 
 // app.use((req ,res ,next)=>{
@@ -56,9 +84,51 @@ app.get("/contact", (req, res) => {
     layout: "layouts/main-layout",
     title: "Halaman Contact",
     contacts: contacts,
-  });
+    msg:req.flash('msg')
 
-});app.get("/contact/:nama", (req, res) => {
+  });
+});
+
+// halaman form tambah data contact
+app.get("/contact/add", (req, res) => {
+  res.render('add-contact', {
+    title: 'Form Tambah Data Contact',
+    layout: 'layouts/main-layout'
+  })
+})
+
+// prosse data contact
+
+app.post('/contact', [
+  body('nama').custom((value) => {
+    const duplikat = cekDuplikat(value);
+    if (duplikat) {
+      throw new Error('nama Contact sudah digunakan');
+    }
+    return true;
+  }),
+  check('email', 'format email salah').isEmail(),
+  check('nohp', 'format no hp salah').isMobilePhone('id-ID')],
+  (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      // return res.status(400).json({errors: errors.array()})
+      res.render('add-contact', {
+        title: 'Form Tambah Data Contact',
+        layout: 'layouts/main-layout',
+        errors: errors.array()
+      })
+    } else{
+      addContact(req.body)
+      // kirimkan  flash
+      req.flash('msg', "Data Contact Berhasil ditambahkan")
+    res.redirect('/contact')
+    }
+  })
+
+
+// alaman detail contac
+app.get("/contact/:nama", (req, res) => {
   const contact = findContact(req.params.nama);
   res.render("detail", {
     layout: "layouts/main-layout",
